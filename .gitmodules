@@ -1,9 +1,10 @@
-[submodule "Lichee-Pi_u-boot"]
-	path = Lichee-Pi_u-boot
-	url = https://gitee.com/TURBOyan/Lichee-Pi_u-boot.git
 [submodule "linux"]
 	path = linux
 	url = https://github.com/Lichee-Pi/linux.git
 [submodule "sunxi-tools"]
 	path = sunxi-tools
 	url = https://github.com/Icenowy/sunxi-tools.git
+[submodule "Lichee-Pi_u-boot"]
+	path = Lichee-Pi_u-boot
+	url = https://gitee.com/TURBOyan/Lichee-Pi_u-boot.git
+	branch = v3s-spi-experimental
