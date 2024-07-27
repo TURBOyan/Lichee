@@ -1,13 +1,14 @@
 #!/bin/bash
 
 ## DIR
-ROOT_DIR=../
+ROOT_DIR=$(pwd)
 SCRIPT_DIR=$ROOT_DIR/script
 PREFIX_DIR=$ROOT_DIR/output
 
 UBOOT_DIR=$ROOT_DIR/Lichee-Pi_u-boot
 LINUX_DIR=$ROOT_DIR/linux
 ROOTFS_DIR=$ROOT_DIR/buildroot-2017.08.1
+LIBS_DIR=$ROOT_DIR/libs_src
 
 TOOLCHAIN_DIR=$ROOT_DIR/toolchain
 TOOLCHAIN=$TOOLCHAIN_DIR/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
@@ -17,7 +18,10 @@ CPP="${TOOLCHAIN}g++"
 ## FLAG
 MK_UBOOT=0
 MK_LINUX=0
-MK_ROOTFS=1
+MK_ROOTFS=0
+
+MK_LIRC=1
+MK_EVTEST=1
 
 ## VARIABLE
 
@@ -66,9 +70,60 @@ function _mk_linux_
     # sudo apt install make gcc flex bison libssl-dev bc kmod
 
     export PREFIX=$PREFIX_DIR/linux
+    export ARCH=arm
+    export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
-    make ARCH=arm licheepi_zero_defconfig
-    make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+    # make ARCH=arm licheepi_zero_defconfig
+    # make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+}
+
+function _mk_lirc_
+{
+    if [ $MK_LIRC -ne 1 ]; then
+        return 0
+    fi
+    echo -e "$KBLUE start make lirc $KRST"
+
+    cd $LIBS_DIR/lirc
+
+    export CC=${TOOLCHAIN}gcc
+    export CXX=${TOOLCHAIN}g++
+    export LD=${TOOLCHAIN}ld
+    export AR=${TOOLCHAIN}ar
+    export AS=${TOOLCHAIN}as
+    export RANLIB=${TOOLCHAIN}ranlib
+    export STRIP=${TOOLCHAIN}strip
+
+    autoreconf -i
+    ./configure --host=arm-linux-gnueabihf
+    make -j8
+    make install DESTDIR=$PREFIX_DIR/lirc
+    make clean
+    cd -
+}
+
+function _mk_evtest_
+{
+    if [ $MK_EVTEST -ne 1 ]; then
+        return 0
+    fi
+    echo -e "$KBLUE start make evtest $KRST"
+
+    cd $LIBS_DIR/evtest
+    export CC=${TOOLCHAIN}gcc
+    export CXX=${TOOLCHAIN}g++
+    export LD=${TOOLCHAIN}ld
+    export AR=${TOOLCHAIN}ar
+    export AS=${TOOLCHAIN}as
+    export RANLIB=${TOOLCHAIN}ranlib
+    export STRIP=${TOOLCHAIN}strip
+
+    ./autogen.sh
+    ./configure --host=arm-linux-gnueabihf
+    make -j8
+    make install DESTDIR=$PREFIX_DIR/evtest
+    make clean
+    cd -
 }
 
 function _mk_rootfs_
@@ -95,6 +150,9 @@ function __main__
     _mk_uboot_
     _mk_linux_
     _mk_rootfs_
+
+    _mk_lirc_
+    _mk_evtest_
 }
 
 __main__
