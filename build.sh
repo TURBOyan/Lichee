@@ -3,7 +3,7 @@
 ## DIR
 ROOT_DIR=$(pwd)
 SCRIPT_DIR=$ROOT_DIR/script
-PREFIX_DIR=$ROOT_DIR/output
+PREFIX_DIR=$ROOT_DIR/publish
 
 UBOOT_DIR=$ROOT_DIR/Lichee-Pi_u-boot
 LINUX_DIR=$ROOT_DIR/linux
@@ -20,8 +20,8 @@ MK_UBOOT=0
 MK_LINUX=0
 MK_ROOTFS=0
 
-MK_LIRC=1
-MK_EVTEST=1
+MK_LIRC=0
+MK_EVTEST=0
 
 ## VARIABLE
 
@@ -84,6 +84,7 @@ function _mk_lirc_
     fi
     echo -e "$KBLUE start make lirc $KRST"
 
+    git submodule update --init --progress libs_src/lirc
     cd $LIBS_DIR/lirc
 
     export CC=${TOOLCHAIN}gcc
@@ -94,6 +95,7 @@ function _mk_lirc_
     export RANLIB=${TOOLCHAIN}ranlib
     export STRIP=${TOOLCHAIN}strip
 
+    ./autogen.sh
     autoreconf -i
     ./configure --host=arm-linux-gnueabihf
     make -j8
@@ -109,6 +111,7 @@ function _mk_evtest_
     fi
     echo -e "$KBLUE start make evtest $KRST"
 
+    git submodule update --init --progress libs_src/evtest
     cd $LIBS_DIR/evtest
     export CC=${TOOLCHAIN}gcc
     export CXX=${TOOLCHAIN}g++
