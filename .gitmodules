@@ -1,7 +1,7 @@
 [submodule "linux"]
 	path = linux
 	url = https://github.com/TURBOyan/lichee_linux.git
-	branch = zero-4.10.y
+	branch = zero-5.2.y
 [submodule "Lichee-Pi_u-boot"]
 	path = Lichee-Pi_u-boot
 	url = https://gitea.turboyan.com/turboyan/Lichee-Pi_u-boot.git
