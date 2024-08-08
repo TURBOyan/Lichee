@@ -8,6 +8,7 @@ PREFIX_DIR=$ROOT_DIR/publish
 UBOOT_DIR=$ROOT_DIR/Lichee-Pi_u-boot
 LINUX_DIR=$ROOT_DIR/linux
 ROOTFS_DIR=$ROOT_DIR/buildroot-2017.08.1
+APP_DIR=$ROOT_DIR/app/TBaseCode
 LIBS_DIR=$ROOT_DIR/libs_src
 
 TOOLCHAIN_DIR=$ROOT_DIR/toolchain
@@ -16,9 +17,11 @@ CC="${TOOLCHAIN}gcc"
 CPP="${TOOLCHAIN}g++"
 
 ## FLAG
+PUSH_BIN=0
 MK_UBOOT=0
-MK_LINUX=0
+MK_KERNEL=0
 MK_ROOTFS=0
+MK_APP=0
 
 MK_LIRC=0
 MK_EVTEST=0
@@ -60,7 +63,7 @@ function _mk_uboot_
 
 function _mk_linux_
 {
-    if [ $MK_LINUX -ne 1 ]; then
+    if [ $MK_KERNEL -ne 1 ]; then
         return 0
     fi
     echo -e "$KBLUE start make linux kernel $KRST"
@@ -74,7 +77,13 @@ function _mk_linux_
     export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
     # make ARCH=arm licheepi_zero_defconfig
-    # make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+    make menuconfig
+    make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+    mkdir -p $PREFIX_DIR/linux/
+    cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/linux/
+    cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero-dock.dtb $PREFIX_DIR/linux/
+
+    cp $PREFIX_DIR/linux/* /mnt/nastftp/
 }
 
 function _mk_lirc_
@@ -138,6 +147,16 @@ function _mk_rootfs_
     _verify_allow_
 }
 
+function _mk_app_
+{
+    if [ $MK_APP -ne 1 ]; then
+        return 0
+    fi
+    echo -e "$KBLUE start make app $KRST"
+    cd $APP_DIR
+    ./build.sh -n THub1 -p
+}
+
 function __main__
 {
     # 编译工具链管理
@@ -150,6 +169,7 @@ function __main__
         echo -e "$KBLUE Tool chain exist!$KRST"
     fi
 
+    _mk_app_
     _mk_uboot_
     _mk_linux_
     _mk_rootfs_
@@ -157,5 +177,74 @@ function __main__
     _mk_lirc_
     _mk_evtest_
 }
+
+#至少输入一个参数
+if [ $# -lt 1 ]; then
+        echo -e "${KYELLOW}Please input the correct parameters, at least 1 parameters!${KRST}"
+        print_usage
+        exit 1
+fi
+
+ARGS=`getopt --options n:,s,c,h,p,o:,r: --long help,app,uboot,kernel,rootfs,name:,clean,svn_ignore,push -n "${PROG}" -- "$@"`
+if [ $? != 0 ]; then
+    echo
+    print_usage
+    exit 1
+fi
+
+for v in ${ARGS}; do
+    if [[ ${v} == -* ]] ; then
+        continue
+    fi
+#    echo "@@@@@@@ $v"
+    # 非 "-" 或者 "--" 开头的参数
+    case "$v" in
+    esac
+done
+
+
+#将规范化后的命令行参数分配至位置参数（$1,$2,...)
+eval set -- "${ARGS}"
+
+while true
+do
+    case "$1" in
+        -h|--help)
+            print_usage
+            exit
+            ;;
+        --app)
+            MK_APP=1;
+            break;
+            ;;
+        --uboot)
+            MK_UBOOT=1;
+            break;
+            ;;
+        --kernel)
+            MK_KERNEL=1;
+            break;
+            ;;
+        --rootfs)
+            MK_ROOTFS=1;
+            break;
+            ;;
+        -p|--push)
+            PUSH_BIN=1;
+            break;
+            ;;
+        --)
+            case "$2" in
+                *)
+                    shift
+                    break
+                    ;;
+            esac
+            ;;
+        *)
+            echo "Internal error!"
+            exit 1
+    esac
+done
 
 __main__
