@@ -14,6 +14,7 @@ TARGET = tuapp
 # 头文件目录
 INC_DIR += -I$(COMMON_DIR)/SystemFunc/inc/
 INC_DIR += -I$(DIFFERENT_DIR)/inc/
+INC_DIR += -I$(DIFFERENT_DIR)/libs/libgpiod/include/
 
 # 源文件列表
 SRCS += $(wildcard $(COMMON_DIR)/SystemFunc/src/*.c)
@@ -25,15 +26,18 @@ CFLAGS = -Wall $(INC_DIR)
 # 目标文件列表
 OBJS = $(SRCS:.c=.o)
 
-# 链接库（如果有的话）
-LIBS =
+# 链接动态库
+SO_LIBS += -L$(DIFFERENT_DIR)/libs/libgpiod/lib -static -lgpiod
+
+# 链接静态库
+A_LIBS +=
 
 # 默认目标
 all: $(TARGET)
 
 # 生成可执行文件
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $^ $(SO_LIBS) $(A_LIBS)
 	cp $(TARGET) $(PREFIX)/$(TARGET)
 
 # 编译每个源文件

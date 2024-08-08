@@ -2,11 +2,14 @@ PROJECT_DIR=$(pwd)
 PRODUCT_NAME=
 BUILD_DIR=
 DIFFERENT_DIR=
+SHARE_DIR=$PROJECT_DIR/share
+
 CROSS_COMPILE=
 PREFIX=
 
 
 # FLAG
+MK_LIBGPIOD=0
 PUSH_BIN=0
 
 function print_usage
@@ -19,6 +22,7 @@ function _check_list_
     CROSS_COMPILE=/home/turboyan/work/Lichee/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
     BUILD_DIR=$PROJECT_DIR/build/THub1
     PREFIX=$PROJECT_DIR/bin/THub1
+    MK_LIBGPIOD=0
 }
 
 function __mk_bin__
@@ -35,9 +39,29 @@ function __push_bin__
     cp tuapp /mnt/nastftp/
 }
 
+function __mk_lib__
+{
+    if [ $MK_LIBGPIOD -eq 1 ]
+    then
+        export CC=${CROSS_COMPILE}gcc
+        export CXX=${CROSS_COMPILE}g++
+        export LD=${CROSS_COMPILE}ld
+        export AR=${CROSS_COMPILE}ar
+        export AS=${CROSS_COMPILE}as
+        export RANLIB=${CROSS_COMPILE}ranlib
+        export STRIP=${CROSS_COMPILE}strip
+        cd $SHARE_DIR/libgpiod-1.6.3
+        ./autogen.sh
+        ./configure --enable-tools=no --host=arm-linux-gnueabihf --prefix=$PREFIX/libgpiod/
+        make
+        make install
+    fi
+}
+
 function __main__
 {
     _check_list_
+    __mk_lib__
     __mk_bin__
 
     if [ $PUSH_BIN -eq 1 ]

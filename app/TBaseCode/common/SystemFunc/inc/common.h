@@ -7,6 +7,9 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/time.h>
+#include <sys/select.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 }
