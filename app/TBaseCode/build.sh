@@ -43,7 +43,6 @@ function __main__
     if [ $PUSH_BIN -eq 1 ]
     then
         __push_bin__
-        echo "push bin"
     fi
 }
 
