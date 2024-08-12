@@ -3,5 +3,6 @@
         "common.h": "c",
         "tapp_platform.h": "c",
         "cerrno": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

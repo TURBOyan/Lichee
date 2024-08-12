@@ -57,8 +57,20 @@ function _mk_uboot_
         return 0
     fi
     echo -e "$KBLUE start make uboot $KRST"
-    _verify_allow_
+    git submodule update --init --progress --depth 1 Lichee-Pi_u-boot/
+
+    export PREFIX=$PREFIX_DIR/uboot
+    export ARCH=arm
+    export CROSS_COMPILE=$TOOLCHAIN
     cd $UBOOT_DIR
+
+    # make LicheePi_Zero_defconfig
+    make menuconfig
+    make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+
+    mkdir -p $PREFIX_DIR/uboot/
+    cp $UBOOT_DIR/u-boot-sunxi-with-spl.bin $PREFIX_DIR/uboot/
+    cp $PREFIX_DIR/uboot/* /mnt/nastftp/
 }
 
 function _mk_linux_
@@ -67,6 +79,7 @@ function _mk_linux_
         return 0
     fi
     echo -e "$KBLUE start make linux kernel $KRST"
+    git submodule update --init --progress --depth 1 linux/
 
     # echo -e "$KBLUE 开始安装依赖 $KRST"
     # _verify_allow_
@@ -76,13 +89,14 @@ function _mk_linux_
     export ARCH=arm
     export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
-    make ARCH=arm licheepi_zero_turbo_defconfig
+    # make ARCH=arm licheepi_zero_turbo_defconfig
     make menuconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+
+
     mkdir -p $PREFIX_DIR/linux/
     cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/linux/
     cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero-dock.dtb $PREFIX_DIR/linux/
-
     cp $PREFIX_DIR/linux/* /mnt/nastftp/
 }
 
