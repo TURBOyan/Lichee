@@ -76,7 +76,7 @@ function _mk_linux_
     export ARCH=arm
     export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
-    # make ARCH=arm licheepi_zero_defconfig
+    make ARCH=arm licheepi_zero_turbo_defconfig
     make menuconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
     mkdir -p $PREFIX_DIR/linux/

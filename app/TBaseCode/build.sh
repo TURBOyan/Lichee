@@ -1,5 +1,7 @@
 PROJECT_DIR=$(pwd)
-PRODUCT_NAME=
+PRODUCT_NAME=(THub1 THub2 )
+OPT_PRODUCT=
+KERNEL_DIR=
 BUILD_DIR=
 DIFFERENT_DIR=
 SHARE_DIR=$PROJECT_DIR/share
@@ -7,6 +9,9 @@ SHARE_DIR=$PROJECT_DIR/share
 CROSS_COMPILE=
 PREFIX=
 
+
+# modules flag
+MK_M_RF433=0
 
 # FLAG
 MK_LIBGPIOD=0
@@ -20,23 +25,38 @@ function print_usage
 function _check_list_
 {
     CROSS_COMPILE=/home/turboyan/work/Lichee/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+    KERNEL_DIR=/home/turboyan/work/Lichee/linux
     BUILD_DIR=$PROJECT_DIR/build/THub1
-    PREFIX=$PROJECT_DIR/bin/THub1
+    DIFFERENT_DIR=$PROJECT_DIR/different/V3S
+    PREFIX=$PROJECT_DIR/bin/V3S
     MK_LIBGPIOD=0
+    MK_M_RF433=1
+}
+
+function _mk_drivers_
+{
+    # make rf433 modules
+    if [ $MK_M_RF433 -eq 1 ]
+    then
+        cd $DIFFERENT_DIR/drivers/RF433
+        mkdir -p $PREFIX/drivers/
+        make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=$KERNEL_DIR PREFIX=$PREFIX/drivers/
+        make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=$KERNEL_DIR clean
+    fi
 }
 
 function __mk_bin__
 {
     cd $BUILD_DIR
-    mkdir -p $PREFIX
-    make -j16 CROSS_COMPILE=$CROSS_COMPILE PREFIX=$PREFIX
+    mkdir -p $PREFIX/THub1
+    make -j16 CROSS_COMPILE=$CROSS_COMPILE PREFIX=$PREFIX/THub1/
     make clean
 }
 
 function __push_bin__
 {
-    cd $PREFIX
-    cp tuapp /mnt/nastftp/
+    cp $PREFIX/drivers/*   /mnt/nastftp/
+    cp $PREFIX/THub1/tuapp /mnt/nastftp/
 }
 
 function __mk_lib__
@@ -61,6 +81,7 @@ function __mk_lib__
 function __main__
 {
     _check_list_
+    _mk_drivers_
     __mk_lib__
     __mk_bin__
 
@@ -106,7 +127,7 @@ do
             exit
             ;;
         -n|--name)
-            PRODUCT_NAME=$2
+            OPT_PRODUCT=$2
             shift 2
             ;;
         -p|--push)

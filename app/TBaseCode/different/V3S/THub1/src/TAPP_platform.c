@@ -10,14 +10,15 @@ struct gpiod_chip *gpiochip0;
 struct gpiod_line *led;
 struct gpiod_line_request_config config;
 
-void microseconds_sleep(unsigned long uSec){
-    struct timeval tv;
-    tv.tv_sec=uSec/1000000;
-    tv.tv_usec=uSec%1000000;
-    int err;
-    do{
-        err=select(0,NULL,NULL,NULL,&tv);
-    }while(err<0 && errno==EINTR);
+#include <time.h>
+
+void high_precision_delay(long us) {
+    struct timespec req, rem;
+    req.tv_sec = us / 1000000000000; // 秒
+    req.tv_nsec = us % 1000000000000; // 纳秒
+    while (nanosleep(&req, &rem) == -1) {
+        req = rem; // 如果被信号打断，继续睡眠
+    }
 }
 
 void T433_BitStatus(int status)
@@ -25,16 +26,16 @@ void T433_BitStatus(int status)
     if(status)
     {
         gpiod_line_set_value(led, 1);
-        nanosleep(481000);
+        high_precision_delay(481000);
         gpiod_line_set_value(led, 0);
-        nanosleep(1280000);
+        high_precision_delay(1280000);
     }
     else
     {
         gpiod_line_set_value(led, 1);
-        nanosleep(1280000);
+        high_precision_delay(1280000);
         gpiod_line_set_value(led, 0);
-        nanosleep(481000);
+        high_precision_delay(481000);
     }
 }
 
@@ -68,13 +69,15 @@ int32_t TAPP_Platform_Init(void)
         return -1;
     }
 
+    high_precision_delay(400);
+
     while (1)
     {
         /* 设置引脚电平 */
-        T433_BitStatus(1);
-        microseconds_sleep(1000);
-        T433_BitStatus(0);
-        microseconds_sleep(1000);
+        gpiod_line_set_value(led, 1);
+        high_precision_delay(400);
+        gpiod_line_set_value(led, 0);
+        high_precision_delay(400);
     }
 
     return 0;
