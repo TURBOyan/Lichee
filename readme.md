@@ -54,6 +54,15 @@ ir_gpio_tx {
     /*active_low = <1>;*/
     status = "okay";
 };
-```dts
+```
 
-参考教程：https://blog.csdn.net/Code_MoMo/article/details/104623584
+# 参考教程
+荔枝派Zero 制作TF启动卡详细过程（绝对能用） https://blog.csdn.net/Code_MoMo/article/details/104623584
+
+荔枝派zero linux5.2，spi flash启动识别不到分区 https://whycan.com/t_4119.html
+
+尝试使用Ubuntu20.04从零构建Licheepi V3s Zero的SPI Flash系统镜像（linux zero-5.2.y）https://whycan.com/t_4193.html
+
+荔枝派Zero 全志V3s，NORFlash xt25f128b的移植 https://blog.csdn.net/u013850566/article/details/123368703
+
+荔枝派Zero（V3s）SPI Flash 启动 https://blog.csdn.net/qq_40860568/article/details/100517132
