@@ -16,6 +16,7 @@ TOOLCHAIN=$TOOLCHAIN_DIR/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin
 CC="${TOOLCHAIN}gcc"
 CPP="${TOOLCHAIN}g++"
 
+
 ## FLAG
 PUSH_BIN=0
 MK_UBOOT=0
