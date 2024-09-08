@@ -91,13 +91,15 @@ function _mk_linux_
     export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
     # make ARCH=arm licheepi_zero_turbo_defconfig
+    # make ARCH=arm licheepi_zero_turbo_spiflash_defconfig
     make menuconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+    make dtbs ARCH=arm CROSS_COMPILE=$TOOLCHAIN
 
 
     mkdir -p $PREFIX_DIR/linux/
     cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/linux/
-    cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero-dock.dtb $PREFIX_DIR/linux/
+    cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero.dtb $PREFIX_DIR/linux/
     cp $PREFIX_DIR/linux/* /mnt/nastftp/
 }
 
