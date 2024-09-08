@@ -18,6 +18,7 @@ CPP="${TOOLCHAIN}g++"
 
 
 ## FLAG
+PULL_CODE=0
 PUSH_BIN=0
 MK_UBOOT=0
 MK_KERNEL=0
@@ -58,7 +59,10 @@ function _mk_uboot_
         return 0
     fi
     echo -e "$KBLUE start make uboot $KRST"
-    git submodule update --init --progress --depth 1 Lichee-Pi_u-boot/
+
+    if [ $PULL_CODE -eq 1 ]; then
+        git submodule update --init --progress --depth 1 Lichee-Pi_u-boot/
+    fi
 
     export PREFIX=$PREFIX_DIR/uboot
     export ARCH=arm
@@ -80,7 +84,10 @@ function _mk_linux_
         return 0
     fi
     echo -e "$KBLUE start make linux kernel $KRST"
-    git submodule update --init --progress --depth 1 linux/
+
+    if [ $PULL_CODE -eq 1 ]; then
+        git submodule update --init --progress --depth 1 linux/
+    fi
 
     # echo -e "$KBLUE 开始安装依赖 $KRST"
     # _verify_allow_
@@ -93,6 +100,7 @@ function _mk_linux_
     # make ARCH=arm licheepi_zero_turbo_defconfig
     # make ARCH=arm licheepi_zero_turbo_spiflash_defconfig
     make menuconfig
+    make savedefconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
     make dtbs ARCH=arm CROSS_COMPILE=$TOOLCHAIN
 
@@ -202,7 +210,7 @@ if [ $# -lt 1 ]; then
         exit 1
 fi
 
-ARGS=`getopt --options n:,s,c,h,p,o:,r: --long help,app,uboot,kernel,rootfs,name:,clean,svn_ignore,push -n "${PROG}" -- "$@"`
+ARGS=`getopt --options n:,s,c,h,p,o:,r: --long help,pull,app,uboot,kernel,rootfs,name:,clean,svn_ignore,push -n "${PROG}" -- "$@"`
 if [ $? != 0 ]; then
     echo
     print_usage
@@ -229,6 +237,10 @@ do
         -h|--help)
             print_usage
             exit
+            ;;
+        --pull)
+            PULL_CODE=1;
+            break;
             ;;
         --app)
             MK_APP=1;
