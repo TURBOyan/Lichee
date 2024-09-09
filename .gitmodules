@@ -6,6 +6,10 @@
 	path = Lichee-Pi_u-boot
 	url = https://gitea.turboyan.com/turboyan/Lichee-Pi_u-boot.git
 	branch = v3s-spi-experimental
+[submodule "buildroot-2024.02.5"]
+	path = buildroot-2024.02.5
+	url = https://gitea.turboyan.com/turboyan/buildroot.git
+	branch = zero-2024.02.5
 [submodule "sunxi-tools"]
 	path = toolchain/sunxi-tools
 	url = https://gitea.turboyan.com/turboyan/sunxi-tools.git
