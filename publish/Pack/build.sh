@@ -26,7 +26,7 @@ function _verify_allow_
 function __main__
 {
     mkdir -p $TMP_DIR/rootfs
-    tar zxvf $ROOTFS_DIR/rootfs-brmin.tar.gz -C $TMP_DIR/rootfs
+    tar zxvf $ROOTFS_DIR/rootfs.tar.gz -C $TMP_DIR/rootfs
     fakeroot mkfs.jffs2 -s 0x100 -e 0x10000 -p 0x9F0000 -d $TMP_DIR/rootfs -o $TMP_DIR/$JFFS2_IMG
 
     dd if=/dev/zero of=$TMP_DIR/$OUTPUT_IMG bs=1M count=16
@@ -35,6 +35,7 @@ function __main__
     dd if=$KERNEL_DIR/zImage of=$TMP_DIR/$OUTPUT_IMG bs=1K seek=1088  conv=notrunc
     dd if=$TMP_DIR/$JFFS2_IMG of=$TMP_DIR/$OUTPUT_IMG  bs=1K seek=6208  conv=notrunc
 
+    cp $TMP_DIR/$OUTPUT_IMG /mnt/nastftp/
     mv $TMP_DIR/$OUTPUT_IMG $PWD
     rm -rf $TMP_DIR
 

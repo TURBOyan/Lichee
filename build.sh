@@ -7,7 +7,7 @@ PREFIX_DIR=$ROOT_DIR/publish
 
 UBOOT_DIR=$ROOT_DIR/Lichee-Pi_u-boot
 LINUX_DIR=$ROOT_DIR/linux
-ROOTFS_DIR=$ROOT_DIR/buildroot-2017.08.1
+ROOTFS_DIR=$ROOT_DIR/buildroot-2024.02.5
 APP_DIR=$ROOT_DIR/app/TBaseCode
 LIBS_DIR=$ROOT_DIR/libs_src
 
@@ -111,6 +111,30 @@ function _mk_linux_
     cp $PREFIX_DIR/linux/* /mnt/nastftp/
 }
 
+function _mk_rootfs_
+{
+    if [ $MK_ROOTFS -ne 1 ]; then
+        return 0
+    fi
+    echo -e "$KBLUE start make rootfs $KRST"
+
+    export PREFIX=$PREFIX_DIR/linux
+    export ARCH=arm
+    export CROSS_COMPILE=$TOOLCHAIN
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    cd $ROOTFS_DIR
+    make ARCH=arm licheepi_zero_turboyan_defconfig
+    make menuconfig
+    make savedefconfig
+    make busybox-menuconfig
+    make busybox-update-config
+    make -j
+
+    mkdir -p $PREFIX_DIR/rootfs/
+    cp $ROOTFS_DIR/output/images/rootfs.tar.gz $PREFIX_DIR/rootfs/
+    cp $PREFIX_DIR/rootfs/* /mnt/nastftp/
+}
+
 function _mk_lirc_
 {
     if [ $MK_LIRC -ne 1 ]; then
@@ -161,15 +185,6 @@ function _mk_evtest_
     make install DESTDIR=$PREFIX_DIR/evtest
     make clean
     cd -
-}
-
-function _mk_rootfs_
-{
-    if [ $MK_ROOTFS -ne 1 ]; then
-        return 0
-    fi
-    echo -e "$KBLUE start make rootfs $KRST"
-    _verify_allow_
 }
 
 function _mk_app_
