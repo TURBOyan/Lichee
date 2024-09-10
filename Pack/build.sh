@@ -116,6 +116,12 @@ function __flashwrite__
     
 }
 
+function __clean__
+{
+    rm -rf $TMP_DIR
+    rm $OUTPUT_IMG
+}
+
 function __main__
 {
     __get_publish__
@@ -131,7 +137,7 @@ if [ $# -lt 1 ]; then
         exit 1
 fi
 
-ARGS=`getopt --options h,g,w: --long help,get,write: -n "${PROG}" -- "$@"`
+ARGS=`getopt --options h,g,w:,c --long help,get,write:,clean -n "${PROG}" -- "$@"`
 if [ $? != 0 ]; then
     echo
     print_usage
@@ -204,13 +210,9 @@ do
                     ;;
             esac
             ;;
-        --)
-            case "$2" in
-                *)
-                    shift
-                    break
-                    ;;
-            esac
+        -c|--clean)
+            __clean__
+            exit
             ;;
         *)
             echo "Internal error!"

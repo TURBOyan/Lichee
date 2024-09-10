@@ -69,7 +69,7 @@ function _mk_uboot_
     export CROSS_COMPILE=$TOOLCHAIN
     cd $UBOOT_DIR
 
-    # make LicheePi_Zero_defconfig
+    make LicheePi_Zero_defconfig
     make menuconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
 
@@ -98,7 +98,7 @@ function _mk_kernel_
     export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
     # make ARCH=arm licheepi_zero_turbo_defconfig
-    # make ARCH=arm licheepi_zero_turbo_spiflash_defconfig
+    make ARCH=arm licheepi_zero_turbo_spiflash_defconfig
     make menuconfig
     make savedefconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
@@ -197,6 +197,21 @@ function _mk_app_
     ./build.sh -n THub1 -p
 }
 
+function __clean__
+{
+    cd $UBOOT_DIR
+    make clean
+    rm -rf $PREFIX_DIR/uboot/
+
+    cd $LINUX_DIR
+    make clean
+    rm -rf $PREFIX_DIR/kernel/
+
+    cd $ROOTFS_DIR
+    make clean
+    rm -rf $PREFIX_DIR/rootfs/
+}
+
 function __main__
 {
     # 编译工具链管理
@@ -277,17 +292,14 @@ do
             PUSH_BIN=1;
             break;
             ;;
-        --)
-            case "$2" in
-                *)
-                    shift
-                    break
-                    ;;
-            esac
+        -c|--clean)
+            __clean__
+            exit
             ;;
         *)
             echo "Internal error!"
             exit 1
+            ;;
     esac
 done
 
