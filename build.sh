@@ -78,7 +78,7 @@ function _mk_uboot_
     cp $PREFIX_DIR/uboot/* /mnt/nastftp/
 }
 
-function _mk_linux_
+function _mk_kernel_
 {
     if [ $MK_KERNEL -ne 1 ]; then
         return 0
@@ -93,7 +93,7 @@ function _mk_linux_
     # _verify_allow_
     # sudo apt install make gcc flex bison libssl-dev bc kmod
 
-    export PREFIX=$PREFIX_DIR/linux
+    export PREFIX=$PREFIX_DIR/kernel
     export ARCH=arm
     export CROSS_COMPILE=$TOOLCHAIN
     cd $LINUX_DIR
@@ -105,10 +105,10 @@ function _mk_linux_
     make dtbs ARCH=arm CROSS_COMPILE=$TOOLCHAIN
 
 
-    mkdir -p $PREFIX_DIR/linux/
-    cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/linux/
-    cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero.dtb $PREFIX_DIR/linux/
-    cp $PREFIX_DIR/linux/* /mnt/nastftp/
+    mkdir -p $PREFIX_DIR/kernel/
+    cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/kernel/
+    cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero.dtb $PREFIX_DIR/kernel/
+    cp $PREFIX_DIR/kernel/* /mnt/nastftp/
 }
 
 function _mk_rootfs_
@@ -211,7 +211,7 @@ function __main__
 
     _mk_app_
     _mk_uboot_
-    _mk_linux_
+    _mk_kernel_
     _mk_rootfs_
 
     _mk_lirc_
