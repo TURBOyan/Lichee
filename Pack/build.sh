@@ -43,9 +43,9 @@ function __get_publish__
     fi
 
     cd $PWD
-    cp ../uboot/* $UBOOT_DIR
-    cp ../kernel/* $KERNEL_DIR
-    cp ../rootfs/rootfs.tar.gz $ROOTFS_DIR
+    cp ../publish/uboot/* $UBOOT_DIR
+    cp ../publish/kernel/* $KERNEL_DIR
+    cp ../publish/rootfs/rootfs.tar.gz $ROOTFS_DIR
 }
 
 function __mk_image__
