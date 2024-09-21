@@ -5,12 +5,24 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 
-#define GPIO_PIN 32  // 假设我们使用 GPIO17
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/device.h>
+#include <linux/cdev.h>
+
+#define GPIO_PIN 32  // 假设我们使用 GPIO32
 
 // 用于定义 433MHz 协议的脉冲长度
 #define RFCMD_LEN (16)
 #define PULSE_SHORT (320)  // 短脉冲脉冲长度为320微秒
 #define PULSE_LONG  (PULSE_SHORT*2)  // 长脉冲脉冲长度为320微秒
+
+#define DEVICE_NAME "rftx"
+#define CLASS_NAME "rftx_class"
+
+static dev_t dev_number;  // 主设备号
+static struct cdev my_cdev;  // 字符设备结构
+static struct class *gpio_class;  // 设备类
 
 typedef struct _RFCTRL_S_
 {
@@ -124,6 +136,7 @@ __s32 send_code(RFCTRL_S* pRFCtrl)
 
     if(pRFCtrl->freq == 0xF4)
     {
+        //rf 433信号发射
         for(i=0;i<pRFCtrl->time;i++)
         {
             send_RF433Data(pRFCtrl);
@@ -133,16 +146,18 @@ __s32 send_code(RFCTRL_S* pRFCtrl)
     return 0;
 }
 
-static ssize_t rf433_write(struct file *file, const char __user *buf, size_t len, loff_t *offset) {
+static ssize_t rftx_write(struct file *file, const char __user *buf, size_t len, loff_t *offset)
+{
     char kbuf[32] = {0};
     RFCTRL_S RFCtrl = {0};
+
     if (len > sizeof(kbuf))
         return -EINVAL;
 
     if (copy_from_user(kbuf, buf, len))
         return -EFAULT;
 
-    // 根据从用户空间传递的 code 发送 RF433 信号
+    // 根据从用户空间传递的 code 发送 RFTX 信号
     kbuf[RFCMD_LEN] = '\0';
     parseString(kbuf, &RFCtrl);
 
@@ -151,40 +166,76 @@ static ssize_t rf433_write(struct file *file, const char __user *buf, size_t len
     return len;
 }
 
-static const struct file_operations rf433_fops = {
-    .write = rf433_write,
+static const struct file_operations rftx_fops = {
+    .write = rftx_write,
 };
 
-static int __init rf433_init(void) {
-    int ret;
+static int __init rftx_init(void) 
+{
+    // 分配主设备号
+    if (alloc_chrdev_region(&dev_number, 0, 1, DEVICE_NAME) < 0)
+    {
+        printk(KERN_ALERT "Failed to allocate character device region\n");
+        return -1;
+    }
 
-    ret = gpio_request(GPIO_PIN, "RF433");
-    if (ret) {
-        printk(KERN_ERR "Unable to request GPIO pin\n");
-        return ret;
+    // 初始化字符设备
+    cdev_init(&my_cdev, &rftx_fops);
+    if (cdev_add(&my_cdev, dev_number, 1) < 0) {
+        printk(KERN_ALERT "Failed to add cdev\n");
+        unregister_chrdev_region(dev_number, 1);
+        return -1;
+    }
+
+    // 创建设备类
+    gpio_class = class_create(THIS_MODULE, CLASS_NAME);
+    if (IS_ERR(gpio_class)) {
+        printk(KERN_ALERT "Failed to create class\n");
+        cdev_del(&my_cdev);
+        unregister_chrdev_region(dev_number, 1);
+        return PTR_ERR(gpio_class);
+    }
+
+    // 创建设备节点
+    if (device_create(gpio_class, NULL, dev_number, NULL, DEVICE_NAME) == NULL) {
+        printk(KERN_ALERT "Failed to create device\n");
+        class_destroy(gpio_class);
+        cdev_del(&my_cdev);
+        unregister_chrdev_region(dev_number, 1);
+        return -1;
+    }
+
+    // 请求 GPIO 32
+    if (!gpio_is_valid(GPIO_PIN) || gpio_request(GPIO_PIN, "RFTX") < 0)
+    {
+        printk(KERN_ALERT "Failed to request GPIO 32\n");
+        device_destroy(gpio_class, dev_number);
+        class_destroy(gpio_class);
+        cdev_del(&my_cdev);
+        unregister_chrdev_region(dev_number, 1);
+        return -1;
     }
 
     gpio_direction_output(GPIO_PIN, 0);
 
-    // 注册字符设备，允许用户空间写入来控制发送
-    ret = register_chrdev(240, "rf433", &rf433_fops);
-    if (ret < 0) {
-        printk(KERN_ERR "Failed to register device\n");
-        gpio_free(GPIO_PIN);
-        return ret;
-    }
-
-    printk(KERN_INFO "RF433 driver initialized\n");
+    printk(KERN_INFO "RFCtrl driver initialized\n");
     return 0;
 }
 
-static void __exit rf433_exit(void) {
-    unregister_chrdev(240, "rf433");
+static void __exit rftx_exit(void) {
+    gpio_set_value(GPIO_PIN, 0);  // 设置 GPIO 为低
     gpio_free(GPIO_PIN);
-    printk(KERN_INFO "RF433 driver exited\n");
+
+    device_destroy(gpio_class, dev_number);
+    class_destroy(gpio_class);
+    cdev_del(&my_cdev);
+    unregister_chrdev_region(dev_number, 1);
+    printk(KERN_INFO "RFTX driver exited\n");
 }
 
-module_init(rf433_init);
-module_exit(rf433_exit);
+module_init(rftx_init);
+module_exit(rftx_exit);
 
 MODULE_LICENSE("GPL");
+MODULE_AUTHOR("turboyan");
+MODULE_DESCRIPTION("RFTX or RF315 send driver");
