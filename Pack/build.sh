@@ -111,7 +111,7 @@ function __flashwrite__
     if [ $WRITE_DIGICAP -eq 1 ]; then
         echo "start write digicap.dav to spi flash"
         _verify_allow_
-        sunxi-fel.exe -p spiflash-write 0 $TMP_DIR/$OUTPUT_IMG
+        sunxi-fel.exe -p spiflash-write 0 $OUTPUT_IMG
     fi
     
 }

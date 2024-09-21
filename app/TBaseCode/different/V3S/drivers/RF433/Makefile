@@ -10,7 +10,6 @@ KERNELDIR:=
 # 驱动的输出目录
 PREFIX=
 
-
 # 默认目标：编译模块
 all:
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) modules

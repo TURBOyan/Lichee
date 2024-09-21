@@ -56,6 +56,9 @@ ir_gpio_tx {
 };
 ```
 
+# 引脚图
+![https://wiki.sipeed.com/soft/Lichee/zh/Zero-Doc/static/start/board_intro_1.png](image.png)
+
 # 参考教程
 荔枝派Zero 制作TF启动卡详细过程（绝对能用） https://blog.csdn.net/Code_MoMo/article/details/104623584
 

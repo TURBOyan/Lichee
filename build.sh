@@ -75,7 +75,10 @@ function _mk_uboot_
 
     mkdir -p $PREFIX_DIR/uboot/
     cp $UBOOT_DIR/u-boot-sunxi-with-spl.bin $PREFIX_DIR/uboot/
-    cp $PREFIX_DIR/uboot/* /mnt/nastftp/
+
+    if [ $PUSH_BIN -eq 1 ]; then
+        cp $PREFIX_DIR/uboot/* /mnt/nastftp/
+    fi
 }
 
 function _mk_kernel_
@@ -155,9 +158,9 @@ function _mk_lirc_
 
     ./autogen.sh
     autoreconf -i
-    ./configure --host=arm-linux-gnueabihf
+    ./configure --host=arm-linux-gnueabihf --prefix=$PREFIX_DIR/lirc --with-driver=userspace
     make -j8
-    make install DESTDIR=$PREFIX_DIR/lirc
+    make install
     make clean
     cd -
 }
@@ -240,7 +243,7 @@ if [ $# -lt 1 ]; then
         exit 1
 fi
 
-ARGS=`getopt --options n:,s,c,h,p,o:,r: --long help,pull,app,uboot,kernel,rootfs,name:,clean,svn_ignore,push -n "${PROG}" -- "$@"`
+ARGS=`getopt --options h,p,c,m: --long help,pull,make:,name:,clean,push -n "${PROG}" -- "$@"`
 if [ $? != 0 ]; then
     echo
     print_usage
@@ -268,24 +271,42 @@ do
             print_usage
             exit
             ;;
+        -m|--make)
+            case "$2" in
+                app)
+                    MK_APP=1
+                    shift
+                    break
+                ;;
+                uboot)
+                    MK_UBOOT=1
+                    shift
+                    break
+                ;;
+                kernel)
+                    MK_KERNEL=1
+                    shift
+                    break
+                ;;
+                rootfs)
+                    MK_ROOTFS=1
+                    shift
+                    break
+                ;;
+                lirc)
+                    MK_LIRC=1
+                    shift
+                    break
+                ;;
+                evtest)
+                    MK_EVTEST=1
+                    shift
+                    break
+                ;;
+            esac
+        ;;
         --pull)
             PULL_CODE=1;
-            break;
-            ;;
-        --app)
-            MK_APP=1;
-            break;
-            ;;
-        --uboot)
-            MK_UBOOT=1;
-            break;
-            ;;
-        --kernel)
-            MK_KERNEL=1;
-            break;
-            ;;
-        --rootfs)
-            MK_ROOTFS=1;
             break;
             ;;
         -p|--push)

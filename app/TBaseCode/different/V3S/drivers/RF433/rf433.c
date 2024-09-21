@@ -1,175 +1,190 @@
-#include <linux/init.h>  
-#include <linux/module.h>
-#include <linux/device.h>  
-#include <linux/kernel.h>  
-#include <linux/fs.h>
-#include <linux/uaccess.h>
+#include <linux/printk.h>
 #include <linux/gpio.h>
-#include <linux/interrupt.h>
-#include <linux/string.h>
 #include <linux/delay.h>
+#include <linux/fs.h>
+#include <linux/module.h>
+#include <linux/uaccess.h>
 
+#define GPIO_PIN 32  // 假设我们使用 GPIO17
 
-MODULE_AUTHOR("turboyan");
-MODULE_LICENSE("GPL");
+// 用于定义 433MHz 协议的脉冲长度
+#define RFCMD_LEN (16)
+#define PULSE_SHORT (320)  // 短脉冲脉冲长度为320微秒
+#define PULSE_LONG  (PULSE_SHORT*2)  // 长脉冲脉冲长度为320微秒
 
-static int majorNumber = 0;
-/*Class 名称，对应/sys/class/下的目录名称*/
-static const char *CLASS_NAME = "rf433_tx_class";
-/*Device 名称，对应/dev下的目录名称*/
-static const char *DEVICE_NAME = "rf433_tx";
-
-static int rf433_tx_open(struct inode *node, struct file *file);
-static ssize_t rf433_tx_read(struct file *file,char *buf, size_t len,loff_t *offset);
-static ssize_t rf433_tx_write(struct file *file,const char *buf,size_t len,loff_t* offset);
-static int rf433_tx_release(struct inode *node,struct file *file);
-
-#define RF433_TX_PIN   32 
-static int gpio_status;
-
-
-static char recv_msg[20];
-
-static struct class *rf433_tx_class = NULL;
-static struct device *rf433_tx_device = NULL;
-
-/*File opertion 结构体，我们通过这个结构体建立应用程序到内核之间操作的映射*/
-static struct file_operations file_oprts = 
+typedef struct _RFCTRL_S_
 {
-    .open = rf433_tx_open,
-    .read = rf433_tx_read,
-    .write = rf433_tx_write,
-    .release = rf433_tx_release,
-};
+    __u8  header;    //帧头 0xFD 固定值
+    __u8  freq;      //发射频率 F3==315M  F4==433M
+    __u8  time;      //发射时间 0x01--0xFF
+    __u16 addr;      //地址16位 每个字节0x01--0xFF 
+    __u8  value;     //键值8位  0x01--0xFF
+    __u8  osc;       //震荡参数，和脉冲长度有关，此处为等于250us的倍数没，0x01--0xFF
+    __u8  endframe;  //帧尾 0xDF 固定值
+} __attribute__((packed)) RFCTRL_S; //不要字节对齐
 
-static void gpio_config(void)
+
+void inline send_sync(__u8 width)
 {
-    if(!gpio_is_valid(RF433_TX_PIN)){
-        printk(KERN_ALERT "Error wrong gpio number\n");
-        return ;
-    }
-    gpio_request(RF433_TX_PIN,"led_ctr");
-    gpio_direction_output(RF433_TX_PIN,1);
-    gpio_set_value(RF433_TX_PIN,1);
-    gpio_status = 1;
+    gpio_set_value(GPIO_PIN, 1);
+    usleep_range(PULSE_SHORT*width, PULSE_SHORT*width + 10);  // 保持高电平
+    gpio_set_value(GPIO_PIN, 0);
+    usleep_range((PULSE_SHORT*width+PULSE_LONG*width)*8, (PULSE_SHORT*width+PULSE_LONG*width)*8 + 10);  // 保持低电平
 }
 
-
-static void gpio_deconfig(void)
-{
-    gpio_free(RF433_TX_PIN);
+// 发送 "1" 的信号 (高电平, 低电平)
+void inline send_high(__u8 width) {
+    gpio_set_value(GPIO_PIN, 1);
+    usleep_range(PULSE_LONG*width, PULSE_LONG*width + 10);  // 保持高电平
+    gpio_set_value(GPIO_PIN, 0);
+    usleep_range(PULSE_SHORT*width, PULSE_SHORT*width + 10);  // 保持低电平
 }
 
-static int __init rf433_tx_init(void)
-{
-    printk(KERN_ALERT "Driver init\r\n");
-    /*注册一个新的字符设备，返回主设备号*/
-    majorNumber = register_chrdev(0,DEVICE_NAME,&file_oprts);
-    if(majorNumber < 0 ){
-        printk(KERN_ALERT "Register failed!!\r\n");
-        return majorNumber;
-    }
-    printk(KERN_ALERT "Registe success,major number is %d\r\n",majorNumber);
+// 发送 "0" 的信号 (低电平, 高电平)
+void inline send_low(__u8 width) {
+    gpio_set_value(GPIO_PIN, 1);
+    usleep_range(PULSE_SHORT*width, PULSE_SHORT*width + 10);  // 保持低电平
+    gpio_set_value(GPIO_PIN, 0);
+    usleep_range(PULSE_LONG*width, PULSE_LONG*width + 10);  // 保持高电平
+}
 
-    /*以CLASS_NAME创建一个class结构，这个动作将会在/sys/class目录创建一个名为CLASS_NAME的目录*/
-    rf433_tx_class = class_create(THIS_MODULE,CLASS_NAME);
-    if(IS_ERR(rf433_tx_class))
+void send_RF433Data(RFCTRL_S* pRFData)
+{
+    __s32 i=0;
+    __u32 width=1;
+
+    //发送同步字
+    send_sync(width);
+
+    //发送地址位
+    for(i=15;i>=0;i--)
     {
-        unregister_chrdev(majorNumber,DEVICE_NAME);
-        return PTR_ERR(rf433_tx_class);
-    }
-
-    /*以DEVICE_NAME为名，参考/sys/class/CLASS_NAME在/dev目录下创建一个设备：/dev/DEVICE_NAME*/
-    rf433_tx_device = device_create(rf433_tx_class,NULL,MKDEV(majorNumber,0),NULL,DEVICE_NAME);
-    if(IS_ERR(rf433_tx_device))
-    {
-        class_destroy(rf433_tx_class);
-        unregister_chrdev(majorNumber,DEVICE_NAME);
-        return PTR_ERR(rf433_tx_device);
-    }
-    printk(KERN_ALERT "rf433_tx device init success!!\r\n");
-
-    return 0;
-}
-
-/*当用户打开这个设备文件时，调用这个函数*/
-static int rf433_tx_open(struct inode *node, struct file *file)
-{
-    printk(KERN_ALERT "GPIO init \n");
-    gpio_config();
-    return 0;
-}
-
-/*当用户试图从设备空间读取数据时，调用这个函数*/
-static ssize_t rf433_tx_read(struct file *file,char *buf, size_t len,loff_t *offset)
-{
-    int cnt = 0;
-    /*将内核空间的数据copy到用户空间*/
-    cnt = copy_to_user(buf,&gpio_status,1);
-    if(0 == cnt){
-        return 0;
-    }
-    else{
-        printk(KERN_ALERT "ERROR occur when reading!!\n");
-        return -EFAULT;
-    }
-    return 1;
-}
-
-/*当用户往设备文件写数据时，调用这个函数*/
-static ssize_t rf433_tx_write(struct file *file,const char *buf,size_t len,loff_t *offset)
-{
-    /*将用户空间的数据copy到内核空间*/
-    int cnt = copy_from_user(recv_msg,buf,len);
-    int loop=0;
-    if(0 == cnt){
-        if(0 == memcmp(recv_msg,"on",2))
+        if(pRFData->addr & (1<<i))
         {
-            printk(KERN_INFO "LED ON32!\n");
-
-            for(loop=0;loop<20;loop++)
-            {
-                gpio_set_value(RF433_TX_PIN,1);
-                gpio_set_value(RF433_TX_PIN,0);
-            }
-            gpio_status = 1;
+            send_high(width);
         }
         else
         {
-            printk(KERN_INFO "LED OFF!\n");
-            for(loop=0;loop<20;loop++)
-            {
-                gpio_set_value(RF433_TX_PIN,1);
-                udelay(1280);
-                gpio_set_value(RF433_TX_PIN,0);
-                udelay(1280);
-            }
-            gpio_status = 0;
+            send_low(width);
         }
     }
-    else{
-        printk(KERN_ALERT "ERROR occur when writing!!\n");
-        return -EFAULT;
+
+    //发送数据位
+    for(i=7;i>=0;i--)
+    {
+        if(pRFData->value & (1<<i))
+        {
+            send_high(width);
+        }
+        else
+        {
+            send_low(width);
+        }
     }
-    return len;
 }
 
-/*当用户打开设备文件时，调用这个函数*/
-static int rf433_tx_release(struct inode *node,struct file *file)
+__s32 parseString(char* hexStr, RFCTRL_S* pRFCtrl)
 {
-    printk(KERN_INFO "Release!!\n");
-    gpio_deconfig();
+    __u8 len = strlen(hexStr);
+    __u64 DataIn={0};
+
+    if (len != RFCMD_LEN)
+    {
+        printk(KERN_ERR "str:%s len error, strlen:%d\n",hexStr,len);
+        return -1;
+    }
+
+    if((NULL == pRFCtrl) || (sizeof(RFCTRL_S) != sizeof(DataIn)))
+    {
+        printk(KERN_ERR "pRFCtrl is NULL, or size:%d error, need:%d\n", sizeof(RFCTRL_S), sizeof(DataIn));
+        return -2; 
+    }
+
+    DataIn = simple_strtoull(hexStr, NULL, 16);
+    pRFCtrl->header     = DataIn>>56 & 0xFF;
+    pRFCtrl->freq       = DataIn>>48 & 0xFF;
+    pRFCtrl->time       = DataIn>>40 & 0xFF;
+    pRFCtrl->addr       = DataIn>>24 & 0xFFFF;
+    pRFCtrl->value      = DataIn>>16 & 0xFF;
+    pRFCtrl->osc        = DataIn>>8 & 0xFF;
+    pRFCtrl->endframe   = DataIn & 0xFF;
     return 0;
 }
 
-/*销毁注册的所有资源，卸载模块，这是保持linux内核稳定的重要一步*/
-static void __exit rf433_tx_exit(void)
+// 发送信号
+__s32 send_code(RFCTRL_S* pRFCtrl)
 {
-    device_destroy(rf433_tx_class,MKDEV(majorNumber,0));
-    class_unregister(rf433_tx_class);
-    class_destroy(rf433_tx_class);
-    unregister_chrdev(majorNumber,DEVICE_NAME);
+    int i=0;
+
+    if(NULL == pRFCtrl || pRFCtrl->header != 0xFD || pRFCtrl->endframe != 0xDF)
+    {
+        printk(KERN_ERR "pRFCtrl is NULL, or header:0x%X or endframe:0x%X error\n", pRFCtrl->header, pRFCtrl->endframe);
+        return -1;
+    }
+
+    if(pRFCtrl->freq == 0xF4)
+    {
+        for(i=0;i<pRFCtrl->time;i++)
+        {
+            send_RF433Data(pRFCtrl);
+        }
+    }
+
+    return 0;
 }
 
-module_init(rf433_tx_init);
-module_exit(rf433_tx_exit);
+static ssize_t rf433_write(struct file *file, const char __user *buf, size_t len, loff_t *offset) {
+    char kbuf[32] = {0};
+    RFCTRL_S RFCtrl = {0};
+    if (len > sizeof(kbuf))
+        return -EINVAL;
+
+    if (copy_from_user(kbuf, buf, len))
+        return -EFAULT;
+
+    // 根据从用户空间传递的 code 发送 RF433 信号
+    kbuf[RFCMD_LEN] = '\0';
+    parseString(kbuf, &RFCtrl);
+
+    send_code(&RFCtrl);
+
+    return len;
+}
+
+static const struct file_operations rf433_fops = {
+    .write = rf433_write,
+};
+
+static int __init rf433_init(void) {
+    int ret;
+
+    ret = gpio_request(GPIO_PIN, "RF433");
+    if (ret) {
+        printk(KERN_ERR "Unable to request GPIO pin\n");
+        return ret;
+    }
+
+    gpio_direction_output(GPIO_PIN, 0);
+
+    // 注册字符设备，允许用户空间写入来控制发送
+    ret = register_chrdev(240, "rf433", &rf433_fops);
+    if (ret < 0) {
+        printk(KERN_ERR "Failed to register device\n");
+        gpio_free(GPIO_PIN);
+        return ret;
+    }
+
+    printk(KERN_INFO "RF433 driver initialized\n");
+    return 0;
+}
+
+static void __exit rf433_exit(void) {
+    unregister_chrdev(240, "rf433");
+    gpio_free(GPIO_PIN);
+    printk(KERN_INFO "RF433 driver exited\n");
+}
+
+module_init(rf433_init);
+module_exit(rf433_exit);
+
+MODULE_LICENSE("GPL");
