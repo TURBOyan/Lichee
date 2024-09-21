@@ -5,15 +5,27 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #define LIRC_SOCKET "/var/run/lirc/lircd"
 #define BUFFER_SIZE 128
+
+char command1[] = "FDF408C38DA14CDF";
+char command2[] = "FDF408C38DA24CDF";
+char command3[] = "FDF408C38DA44CDF";
+char command4[] = "FDF408C38DA84CDF";
 
 int lirc_test()
 {
     int sockfd;
     struct sockaddr_un serv_addr;
     char buffer[BUFFER_SIZE];
+
+    int fd = open("/dev/rftx", O_WRONLY);
+    if (fd < 0) {
+        perror("Failed to open device");
+        return 1;
+    }
 
     // 创建 Socket
     if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -44,20 +56,41 @@ int lirc_test()
             // 解析并显示按键事件
             printf("接收到的按键事件: %s\n", buffer);
 
+    
             // 检查特定按键
-            if (strstr(buffer, "KEY_1")) {
-                printf("按键事件1被按下\n");
-            } else if (strstr(buffer, "KEY_2")) {
-                printf("按键事件2被按下\n");
-            } else if (strstr(buffer, "KEY_3")) {
-                printf("按键事件3被按下\n");
-            } else if (strstr(buffer, "KEY_4")) {
-                printf("按键事件4被按下\n");
+            if (strstr(buffer, "KEY_UP"))
+            {
+                printf("KEY_UP\n");
+                if (write(fd, command1, strlen(command1)) < 0) {
+                    perror("Failed to send command");
+                }
+            }
+            else if (strstr(buffer, "KEY_DOWN"))
+            {
+                printf("KEY_DOWN\n");
+                if (write(fd, command2, strlen(command2)) < 0) {
+                    perror("Failed to send command");
+                }
+            }
+            else if (strstr(buffer, "KEY_LEFT"))
+            {
+                printf("KEY_LEFT\n");
+                if (write(fd, command3, strlen(command3)) < 0) {
+                    perror("Failed to send command");
+                }
+            }
+            else if (strstr(buffer, "KEY_RIGHT"))
+            {
+                printf("KEY_RIGHT\n");
+                if (write(fd, command4, strlen(command4)) < 0) {
+                    perror("Failed to send command");
+                }
             }
         }
     }
 
     // 关闭 Socket
     close(sockfd);
+    close(fd);
     return 0;
 }
