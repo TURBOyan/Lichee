@@ -1,0 +1,49 @@
+#!/bin/sh
+
+umask 077
+
+start()
+{
+    echo "Starting THub1 Init log: THub1 is coming!!!"
+    
+    # mount
+    mkdir -p /dav
+    mount /dev/mmcblk0p3 /dav
+    mkdir -p /mnt/mmc01/
+    mount /dev/mmcblk0p4 /mnt/mmc01/
+
+    source /dav/initrun.sh start &
+}
+
+stop()
+{
+    echo "Stopping THub1 Init log: THub1 is leaving!!!"
+    source /dav/initrun.sh stop &
+
+    umount /dav
+    umount /mnt/mmc01/
+}
+
+restart()
+{
+    stop
+    start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart|reload)
+        restart
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $?
+

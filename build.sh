@@ -105,12 +105,14 @@ function _mk_kernel_
     make menuconfig
     make savedefconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
+    make modules ARCH=arm CROSS_COMPILE=$TOOLCHAIN
     make dtbs ARCH=arm CROSS_COMPILE=$TOOLCHAIN
 
 
     mkdir -p $PREFIX_DIR/kernel/
     cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/kernel/
     cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero.dtb $PREFIX_DIR/kernel/
+    cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero-dock.dtb $PREFIX_DIR/kernel/
     cp $PREFIX_DIR/kernel/* /mnt/nastftp/
 }
 
