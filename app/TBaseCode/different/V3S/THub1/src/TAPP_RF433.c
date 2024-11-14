@@ -51,7 +51,7 @@ static int32_t Parse_RFTX_Param(void)
     int size = fread(jsonStr, sizeof(char), fileSize, file);
     if (size == 0)
     {
-        printf("fread:%s failed!\n",RFTX_JSON_FILE);
+        printf("fread:%s failed!\n", RFTX_JSON_FILE);
         fclose(file);
         return -2;
     }
@@ -61,7 +61,7 @@ static int32_t Parse_RFTX_Param(void)
     cJSON *root = cJSON_Parse(jsonStr);
     if (root == NULL)
     {
-        RF433_ERROR("parse fail. %s\n",cJSON_GetErrorPtr());
+        RF433_ERROR("parse fail. %s\n", cJSON_GetErrorPtr());
         return -1;
     }
 
@@ -75,25 +75,25 @@ static int32_t Parse_RFTX_Param(void)
             {
                 printf("%s = %s\n", obj->string, obj->valuestring);
 
-                if(strcmp(obj->string, "RF_UP") == 0)
+                if (strcmp(obj->string, "RF_UP") == 0)
                 {
                     stCMD2CHAR[RF_UP].cmd = RF_UP;
-                    strcpy(stCMD2CHAR[RF_UP].cmdStr, (const char*)obj->valuestring);
+                    strcpy(stCMD2CHAR[RF_UP].cmdStr, (const char *)obj->valuestring);
                 }
-                else if(strcmp(obj->string, "RF_DOWN") == 0)
+                else if (strcmp(obj->string, "RF_DOWN") == 0)
                 {
                     stCMD2CHAR[RF_DOWN].cmd = RF_DOWN;
-                    strcpy(stCMD2CHAR[RF_DOWN].cmdStr, (const char*)obj->valuestring);
+                    strcpy(stCMD2CHAR[RF_DOWN].cmdStr, (const char *)obj->valuestring);
                 }
-                else if(strcmp(obj->string, "RF_STOP") == 0)
+                else if (strcmp(obj->string, "RF_STOP") == 0)
                 {
                     stCMD2CHAR[RF_STOP].cmd = RF_STOP;
-                    strcpy(stCMD2CHAR[RF_STOP].cmdStr, (const char*)obj->valuestring);
+                    strcpy(stCMD2CHAR[RF_STOP].cmdStr, (const char *)obj->valuestring);
                 }
-                else if(strcmp(obj->string, "RF_LOCK") == 0)
+                else if (strcmp(obj->string, "RF_LOCK") == 0)
                 {
                     stCMD2CHAR[RF_LOCK].cmd = RF_LOCK;
-                    strcpy(stCMD2CHAR[RF_LOCK].cmdStr, (const char*)obj->valuestring);
+                    strcpy(stCMD2CHAR[RF_LOCK].cmdStr, (const char *)obj->valuestring);
                 }
             }
             // 获取下一个元素
@@ -105,8 +105,57 @@ static int32_t Parse_RFTX_Param(void)
     return 0;
 }
 
+#define RLED_DEV_PATH "/sys/class/leds/licheepi:red:usr/brightness"
+#define GLED_DEV_PATH "/sys/class/leds/licheepi:green:usr/brightness"
+#define BLED_DEV_PATH "/sys/class/leds/licheepi:blue:usr/brightness"
+FILE *r_fd, *g_fd, *b_fd;
+int32_t LEDS_Init(void)
+{
+    printf("start init the leds\n");
+    // 获取红灯的设备文件描述符
+    r_fd = fopen(RLED_DEV_PATH, "w");
+    if (r_fd < 0)
+    {
+        printf("Fail to Open %s device\n", RLED_DEV_PATH);
+        return -1;
+    }
+    fwrite("0",1,1,r_fd);
+    fflush(r_fd);
+
+    // 获取绿灯的设备文件描述符
+    g_fd = fopen(GLED_DEV_PATH, "w");
+    if (g_fd < 0)
+    {
+        printf("Fail to Open %s device\n", GLED_DEV_PATH);
+        return -2;
+    }
+    fwrite("0",1,1,g_fd);
+    fflush(g_fd);
+
+    // 获取蓝灯的设备文件描述符
+    b_fd = fopen(BLED_DEV_PATH, "w");
+    if (b_fd < 0)
+    {
+        printf("Fail to Open %s device\n", BLED_DEV_PATH);
+        return -3;
+    }
+    fwrite("0",1,1,b_fd);
+    fflush(b_fd);
+
+    //红灯亮1秒，指示系统正常
+    fwrite("255",3,1,r_fd);
+    fflush(r_fd);
+    sleep(1);
+    //红灯灭
+    fwrite("0",1,1,r_fd);
+    fflush(r_fd);
+
+    return 0;
+}
+
 int32_t TAPP_RF433_Init(void)
 {
+    LEDS_Init();
     Parse_RFTX_Param();
     rf_fd = open(RFTX_DEV, O_WRONLY);
     if (rf_fd < 0)
@@ -133,9 +182,12 @@ int32_t TAPP_RF433_SendCMD(RF_CMD_E cmd)
     }
 
     pthread_mutex_lock(&rftx_mutex);
+    //蓝灯亮
+    fwrite("255",3,1,b_fd);
+    fflush(b_fd);
     if (cmd == stCMD2CHAR[cmd].cmd)
     {
-        ret = write(rf_fd, stCMD2CHAR[cmd].cmdStr, strlen((const char*)stCMD2CHAR[cmd].cmdStr));
+        ret = write(rf_fd, stCMD2CHAR[cmd].cmdStr, strlen((const char *)stCMD2CHAR[cmd].cmdStr));
         if (ret != strlen(stCMD2CHAR[cmd].cmdStr))
         {
             RF433_ERROR("TAPP_RF433_SendCMD write to rf_fd failed, ret:%d\n", ret);
@@ -143,6 +195,9 @@ int32_t TAPP_RF433_SendCMD(RF_CMD_E cmd)
             return -3;
         }
     }
+    //蓝灯灭
+    fwrite("0",1,1,b_fd);
+    fflush(b_fd);
     pthread_mutex_unlock(&rftx_mutex);
     return 0;
 }
