@@ -1,35 +1,27 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include "TAPP_lirc.h"
+
+#include "TAPP_RF433.h"
 
 #define LIRC_SOCKET "/var/run/lirc/lircd"
 #define BUFFER_SIZE 128
 
-char command1[] = "FDF408C38DA14CDF";
-char command2[] = "FDF408C38DA24CDF";
-char command3[] = "FDF408C38DA44CDF";
-char command4[] = "FDF408C38DA84CDF";
+#define LIRC_INFO printf
+#define LIRC_WARN printf
+#define LIRC_ERROR printf
+#define LIRC_FATAL printf
 
-int lirc_test()
+void *TAPP_lirc_Process(void)
 {
     int sockfd;
     struct sockaddr_un serv_addr;
     char buffer[BUFFER_SIZE];
 
-    int fd = open("/dev/rftx", O_WRONLY);
-    if (fd < 0) {
-        perror("Failed to open device");
-        return 1;
-    }
+    printf("start TAPP_lirc_Process\n");
 
     // 创建 Socket
-    if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        perror("Socket 创建失败");
+    if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    {
+        perror("Socket create fail");
         exit(EXIT_FAILURE);
     }
 
@@ -39,58 +31,62 @@ int lirc_test()
     strncpy(serv_addr.sun_path, LIRC_SOCKET, sizeof(serv_addr.sun_path) - 1);
 
     // 连接到 lircd 的 Unix Socket
-    if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) {
-        perror("连接 lircd 失败");
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
+    {
+        perror("connect to lircd fail\n");
         close(sockfd);
         exit(EXIT_FAILURE);
     }
 
-    printf("已连接到 lircd, 等待按键事件...\n");
+    printf("lircd connected...\n");
 
     // 循环读取按键事件
-    while (1) {
+    while (1)
+    {
+        usleep(100 * 1000);
         memset(buffer, 0, BUFFER_SIZE);
-
         // 从 lircd 读取按键数据
-        if (read(sockfd, buffer, BUFFER_SIZE) > 0) {
+        if (read(sockfd, buffer, BUFFER_SIZE) > 0)
+        {
             // 解析并显示按键事件
-            printf("接收到的按键事件: %s\n", buffer);
+            printf("receive IR: %s\n", buffer);
 
-    
             // 检查特定按键
             if (strstr(buffer, "KEY_UP"))
             {
                 printf("KEY_UP\n");
-                if (write(fd, command1, strlen(command1)) < 0) {
+                if (TAPP_RF433_SendCMD(RF_UP) < 0)
+                {
                     perror("Failed to send command");
                 }
             }
             else if (strstr(buffer, "KEY_DOWN"))
             {
                 printf("KEY_DOWN\n");
-                if (write(fd, command2, strlen(command2)) < 0) {
+                if (TAPP_RF433_SendCMD(RF_DOWN) < 0)
+                {
                     perror("Failed to send command");
                 }
             }
             else if (strstr(buffer, "KEY_LEFT"))
             {
                 printf("KEY_LEFT\n");
-                if (write(fd, command3, strlen(command3)) < 0) {
+                if (TAPP_RF433_SendCMD(RF_LOCK) < 0)
+                {
                     perror("Failed to send command");
                 }
             }
             else if (strstr(buffer, "KEY_RIGHT"))
             {
                 printf("KEY_RIGHT\n");
-                if (write(fd, command4, strlen(command4)) < 0) {
+                if (TAPP_RF433_SendCMD(RF_STOP) < 0)
+                {
                     perror("Failed to send command");
                 }
             }
         }
     }
-
     // 关闭 Socket
     close(sockfd);
-    close(fd);
-    return 0;
+    return NULL;
 }

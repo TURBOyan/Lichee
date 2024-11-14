@@ -7,9 +7,17 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
 #include <sys/time.h>
 #include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <errno.h>
+#include <fcntl.h>
+
 
 #ifdef __cplusplus
 }

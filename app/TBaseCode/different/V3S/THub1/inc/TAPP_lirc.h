@@ -5,7 +5,9 @@
 extern "C" {
 #endif
 
-int lirc_test(void);
+#include "common.h"
+
+void* TAPP_lirc_Process(void);
 
 #ifdef __cplusplus
 }

@@ -12,16 +12,20 @@ CC = $(CROSS_COMPILE)gcc
 TARGET = tuapp
 
 # 头文件目录
+INC_DIR += -I$(COMMON_DIR)/cJSON/
 INC_DIR += -I$(COMMON_DIR)/SystemFunc/inc/
 INC_DIR += -I$(DIFFERENT_DIR)/inc/
 INC_DIR += -I$(DIFFERENT_DIR)/libs/libgpiod/include/
 
 # 源文件列表
+SRCS += $(wildcard $(COMMON_DIR)/cJSON/*.c)
 SRCS += $(wildcard $(COMMON_DIR)/SystemFunc/src/*.c)
 SRCS += $(wildcard $(DIFFERENT_DIR)/src/*.c)
 
 # 编译选项
-CFLAGS = -Wall $(INC_DIR)
+CFLAGS += -Wall $(INC_DIR)
+
+LDFLAGS += -lpthread
 
 # 目标文件列表
 OBJS = $(SRCS:.c=.o)
@@ -37,12 +41,12 @@ all: $(TARGET)
 
 # 生成可执行文件
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(SO_LIBS) $(A_LIBS)
+	$(CC) $(CFLAGS) -o $@ $^ $(SO_LIBS) $(A_LIBS) $(LDFLAGS)
 	cp $(TARGET) $(PREFIX)/$(TARGET)
 
 # 编译每个源文件
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
 
 # 清理
 clean:
