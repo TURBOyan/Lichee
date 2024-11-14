@@ -14,6 +14,7 @@ extern "C" {
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <errno.h>
 #include <fcntl.h>

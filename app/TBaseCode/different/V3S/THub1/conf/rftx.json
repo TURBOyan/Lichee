@@ -1,0 +1,9 @@
+{
+    "rftx_cmd":
+    {
+        "RF_UP":   "FDF40A37326857DF",
+        "RF_DOWN": "FDF40A37326257DF",
+		"RF_STOP": "FDF40A37326457DF",
+		"RF_LOCK": "FDF40A37326157DF"
+    }
+}
