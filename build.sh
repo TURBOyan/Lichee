@@ -77,7 +77,9 @@ function _mk_uboot_
     cp $UBOOT_DIR/u-boot-sunxi-with-spl.bin $PREFIX_DIR/uboot/
 
     if [ $PUSH_BIN -eq 1 ]; then
-        cp $PREFIX_DIR/uboot/* /mnt/nastftp/
+        for file in $PREFIX_DIR/uboot/*; do
+            exchange -p $file
+        done
     fi
 }
 
@@ -113,7 +115,12 @@ function _mk_kernel_
     cp $LINUX_DIR/arch/arm/boot/zImage $PREFIX_DIR/kernel/
     cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero.dtb $PREFIX_DIR/kernel/
     cp $LINUX_DIR/arch/arm/boot/dts/sun8i-v3s-licheepi-zero-dock.dtb $PREFIX_DIR/kernel/
-    cp $PREFIX_DIR/kernel/* /mnt/nastftp/
+
+    if [ $PUSH_BIN -eq 1 ]; then
+        for file in $PREFIX_DIR/kernel/*; do
+            exchange -p $file
+        done
+    fi
 }
 
 function _mk_rootfs_
@@ -137,7 +144,12 @@ function _mk_rootfs_
 
     mkdir -p $PREFIX_DIR/rootfs/
     cp $ROOTFS_DIR/output/images/rootfs.tar.gz $PREFIX_DIR/rootfs/
-    cp $PREFIX_DIR/rootfs/* /mnt/nastftp/
+    
+    if [ $PUSH_BIN -eq 1 ]; then
+        for file in $PREFIX_DIR/rootfs/*; do
+            exchange -p $file
+        done
+    fi
 }
 
 function _mk_lirc_
@@ -277,47 +289,44 @@ do
             case "$2" in
                 app)
                     MK_APP=1
-                    shift
-                    break
+                    shift 2
                 ;;
                 uboot)
                     MK_UBOOT=1
-                    shift
-                    break
+                    shift 2
                 ;;
                 kernel)
                     MK_KERNEL=1
-                    shift
-                    break
+                    shift 2
                 ;;
                 rootfs)
                     MK_ROOTFS=1
-                    shift
-                    break
+                    shift 2
                 ;;
                 lirc)
                     MK_LIRC=1
-                    shift
-                    break
+                    shift 2
                 ;;
                 evtest)
                     MK_EVTEST=1
-                    shift
-                    break
+                    shift 2
                 ;;
             esac
         ;;
         --pull)
             PULL_CODE=1;
-            break;
+            shift
             ;;
         -p|--push)
             PUSH_BIN=1;
-            break;
+            shift
             ;;
         -c|--clean)
             __clean__
             exit
+            ;;
+		--)
+            break
             ;;
         *)
             echo "Internal error!"
