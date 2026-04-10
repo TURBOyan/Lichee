@@ -3,6 +3,27 @@
 - 本仓库顶层工作区由 `repo` 统一管理，不再使用 Git submodule。
 - 主要目录的用途、来源仓库和分支说明见 `repo-layout.md`。
 
+# Gitea 推送说明
+
+- `main` 分支开启保护后，不能直接推送到 `main`。
+- 本项目可通过 Gitea 的 AGit 方式在推送时直接创建指向 `main` 的合并请求。
+- 使用 `refs/for/main` 推送时，必须提供 `topic`，否则会报 `topic-branch is not set`。
+
+示例：
+
+```bash
+git push origin HEAD:refs/for/main \
+  -o topic="repo-layout" \
+  -o title="整理 repo 管理结构" \
+  -o description="移除旧 submodule 元数据，补充目录来源说明"
+```
+
+最简写法：
+
+```bash
+git push origin HEAD:refs/for/main -o topic="repo-layout"
+```
+
 # 注意点：
     1、所有操作均在root权限下执行！！！！解压rootfs.tar时，需要在root用户下，否则会报EXT4-fs (mmcblk0p2): couldn‘t mount RDWR because of unsupported optional features (400)
     2、用户名：root，密码licheepi
