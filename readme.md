@@ -1,3 +1,8 @@
+# 项目结构与来源
+
+- 本仓库顶层工作区由 `repo` 统一管理，不再使用 Git submodule。
+- 主要目录的用途、来源仓库和分支说明见 `repo-layout.md`。
+
 # 注意点：
     1、所有操作均在root权限下执行！！！！解压rootfs.tar时，需要在root用户下，否则会报EXT4-fs (mmcblk0p2): couldn‘t mount RDWR because of unsupported optional features (400)
     2、用户名：root，密码licheepi

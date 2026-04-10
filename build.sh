@@ -53,16 +53,32 @@ function _verify_allow_
     esac
 }
 
+function _sync_repo_sources_
+{
+    if [ $PULL_CODE -ne 1 ]; then
+        return 0
+    fi
+
+    if [ ! -d "$ROOT_DIR/.repo/" ]; then
+        echo -e "$KBOLD$KRED==当前目录不是repo工作区，无法执行repo sync==$KRST"
+        exit 1
+    fi
+
+    if ! command -v repo >/dev/null 2>&1; then
+        echo -e "$KBOLD$KRED==未找到repo命令，请先安装repo工具==$KRST"
+        exit 1
+    fi
+
+    echo -e "$KBLUE start repo sync source tree $KRST"
+    repo sync
+}
+
 function _mk_uboot_
 {
     if [ $MK_UBOOT -ne 1 ]; then
         return 0
     fi
     echo -e "$KBLUE start make uboot $KRST"
-
-    if [ $PULL_CODE -eq 1 ]; then
-        git submodule update --init --progress --depth 1 Lichee-Pi_u-boot/
-    fi
 
     export PREFIX=$PREFIX_DIR/uboot
     export ARCH=arm
@@ -89,10 +105,6 @@ function _mk_kernel_
         return 0
     fi
     echo -e "$KBLUE start make linux kernel $KRST"
-
-    if [ $PULL_CODE -eq 1 ]; then
-        git submodule update --init --progress --depth 1 linux/
-    fi
 
     # echo -e "$KBLUE 开始安装依赖 $KRST"
     # _verify_allow_
@@ -158,8 +170,6 @@ function _mk_lirc_
         return 0
     fi
     echo -e "$KBLUE start make lirc $KRST"
-
-    git submodule update --init --progress libs_src/lirc
     cd $LIBS_DIR/lirc
 
     export CC=${TOOLCHAIN}gcc
@@ -185,8 +195,6 @@ function _mk_evtest_
         return 0
     fi
     echo -e "$KBLUE start make evtest $KRST"
-
-    git submodule update --init --progress libs_src/evtest
     cd $LIBS_DIR/evtest
     export CC=${TOOLCHAIN}gcc
     export CXX=${TOOLCHAIN}g++
@@ -231,6 +239,8 @@ function __clean__
 
 function __main__
 {
+    _sync_repo_sources_
+
     # 编译工具链管理
     if [ ! -d "$ROOT_DIR/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/" ];then
         echo -e "$KYELLOW 编译工具链未解压,是否解压?$KRST"
