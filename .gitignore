@@ -1,1 +1,10 @@
-toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf
+toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/
+toolchain/sunxi-tools/
+.repo/
+
+# repo 管理的源码目录，不再作为顶层 git submodule 跟踪
+linux/
+Lichee-Pi_u-boot/
+buildroot-2024.02.5/
+libs_src/evtest/
+libs_src/lirc/
