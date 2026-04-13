@@ -5,7 +5,7 @@
 
 # Gitea 推送说明
 
-- `main` 分支开启保护后，不能直接推送到 `main`。
+- `main` 分支开启保护后，不能直接推送到 `main`
 - 本项目可通过 Gitea 的 AGit 方式在推送时直接创建指向 `main` 的合并请求。
 - 使用 `refs/for/main` 推送时，必须提供 `topic`，否则会报 `topic-branch is not set`。
 
