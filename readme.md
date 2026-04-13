@@ -1,7 +1,7 @@
 # 项目结构与来源
 
 - 本仓库顶层工作区由 `repo` 统一管理，不再使用 Git submodule。
-- 主要目录的用途、来源仓库和分支说明见 `repo-layout.md`。
+- 主要目录的用途、来源仓库和分支说明见 `repo-layout.md`
 
 # Gitea 推送说明
 
