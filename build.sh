@@ -182,7 +182,10 @@ function _mk_lirc_
 
     ./autogen.sh
     autoreconf -i
-    ./configure --host=arm-linux-gnueabihf --prefix=$PREFIX_DIR/lirc --with-driver=userspace
+    ac_cv_file__dev_input=no HAVE_WORKING_POLL=yes ./configure \
+        --host=arm-linux-gnueabihf \
+        --prefix=$PREFIX_DIR/lirc \
+        --enable-devinput=no
     make -j8
     make install
     make clean
