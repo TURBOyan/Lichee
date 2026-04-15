@@ -1,4 +1,6 @@
-PROJECT_DIR=$(pwd)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_DIR=$SCRIPT_DIR
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 PRODUCT_NAME=(THub1 THub2 )
 OPT_PRODUCT=
 KERNEL_DIR=
@@ -24,8 +26,8 @@ function print_usage
 
 function _check_list_
 {
-    CROSS_COMPILE=/home/turboyan/work/Lichee/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
-    KERNEL_DIR=/home/turboyan/work/Lichee/linux
+    CROSS_COMPILE=$REPO_ROOT/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+    KERNEL_DIR=$REPO_ROOT/linux
     BUILD_DIR=$PROJECT_DIR/build/THub1
     DIFFERENT_DIR=$PROJECT_DIR/different/V3S
     PREFIX=$PROJECT_DIR/bin/V3S
