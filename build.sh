@@ -10,6 +10,7 @@ LINUX_DIR=$ROOT_DIR/linux
 ROOTFS_DIR=$ROOT_DIR/buildroot-2024.02.5
 APP_DIR=$ROOT_DIR/app/TBaseCode
 LIBS_DIR=$ROOT_DIR/libs_src
+PACK_DIR=$ROOT_DIR/Pack
 
 TOOLCHAIN_DIR=$ROOT_DIR/toolchain
 TOOLCHAIN=$TOOLCHAIN_DIR/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
@@ -27,6 +28,8 @@ MK_APP=0
 
 MK_LIRC=0
 MK_EVTEST=0
+MK_PACK=0
+INTERACTIVE_CONFIG=0
 
 ## VARIABLE
 
@@ -46,11 +49,40 @@ KUNDERLINE="\e[4m"  #下划线
 
 function _verify_allow_
 {
+    if [ $INTERACTIVE_CONFIG -ne 1 ]; then
+        echo -e "$KYELLOW 非交互模式，自动继续执行$KRST"
+        return 0
+    fi
+
     read -p "输入y继续, 输入其他则退出脚本:" input
     case $input in
         [yY] ) return 1;;
         * ) echo -e "$KBOLD$KRED==操作无法继续，终止脚本==$KRST"; exit 1;;
     esac
+}
+
+function _run_config_command_
+{
+    if [ $INTERACTIVE_CONFIG -eq 1 ]; then
+        "$@"
+        return $?
+    fi
+
+    echo -e "$KYELLOW 非交互模式，跳过配置命令: $*$KRST"
+}
+
+function print_usage
+{
+    echo "Usage: $0 [options]"
+    echo
+    echo "Options:"
+    echo "  -h, --help              显示帮助信息"
+    echo "      --pull              先执行 repo sync"
+    echo "  -p, --push              编译完成后推送产物"
+    echo "  -c, --clean             清理构建产物"
+    echo "  -m, --make <target>     构建目标: app|uboot|kernel|rootfs|lirc|evtest|pack"
+    echo "  -i, --interactive       启用交互式配置(默认)"
+    echo "  -n, --non-interactive   禁用交互式配置，沿用已有配置参数"
 }
 
 function _sync_repo_sources_
@@ -86,7 +118,7 @@ function _mk_uboot_
     cd $UBOOT_DIR
 
     make LicheePi_Zero_defconfig
-    make menuconfig
+    _run_config_command_ make menuconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
 
     mkdir -p $PREFIX_DIR/uboot/
@@ -116,8 +148,8 @@ function _mk_kernel_
     cd $LINUX_DIR
     # make ARCH=arm licheepi_zero_turbo_defconfig
     make ARCH=arm licheepi_zero_turbo_spiflash_defconfig
-    make menuconfig
-    make savedefconfig
+    _run_config_command_ make menuconfig
+    _run_config_command_ make savedefconfig
     make -j16 ARCH=arm CROSS_COMPILE=$TOOLCHAIN
     make modules ARCH=arm CROSS_COMPILE=$TOOLCHAIN
     make dtbs ARCH=arm CROSS_COMPILE=$TOOLCHAIN
@@ -148,10 +180,10 @@ function _mk_rootfs_
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     cd $ROOTFS_DIR
     make ARCH=arm licheepi_zero_turboyan_defconfig
-    make menuconfig
-    make savedefconfig
-    make busybox-menuconfig
-    make busybox-update-config
+    _run_config_command_ make menuconfig
+    _run_config_command_ make savedefconfig
+    _run_config_command_ make busybox-menuconfig
+    _run_config_command_ make busybox-update-config
     make -j
 
     mkdir -p $PREFIX_DIR/rootfs/
@@ -222,7 +254,36 @@ function _mk_app_
     fi
     echo -e "$KBLUE start make app $KRST"
     cd $APP_DIR
-    ./build.sh -n THub1 -p
+    if [ $PUSH_BIN -eq 1 ]; then
+        ./build.sh --name THub1 --push
+    else
+        ./build.sh --name THub1
+    fi
+}
+
+function _mk_pack_
+{
+    if [ $MK_PACK -ne 1 ]; then
+        return 0
+    fi
+
+    echo -e "$KBLUE start pack image $KRST"
+    cd "$PACK_DIR"
+
+    if [ $PUSH_BIN -eq 1 ]; then
+        ./build.sh --get --push
+    else
+        ./build.sh --get
+    fi
+}
+
+function _need_toolchain_
+{
+    if [ $MK_APP -eq 1 ] || [ $MK_UBOOT -eq 1 ] || [ $MK_KERNEL -eq 1 ] || [ $MK_ROOTFS -eq 1 ] || [ $MK_LIRC -eq 1 ] || [ $MK_EVTEST -eq 1 ]; then
+        return 0
+    fi
+
+    return 1
 }
 
 function __clean__
@@ -238,20 +299,44 @@ function __clean__
     cd $ROOTFS_DIR
     make clean
     rm -rf $PREFIX_DIR/rootfs/
+
+    if [ -d "$LIBS_DIR/lirc" ]; then
+        cd "$LIBS_DIR/lirc"
+        make clean >/dev/null 2>&1 || true
+    fi
+    rm -rf $PREFIX_DIR/lirc/
+
+    if [ -d "$LIBS_DIR/evtest" ]; then
+        cd "$LIBS_DIR/evtest"
+        make clean >/dev/null 2>&1 || true
+    fi
+    rm -rf $PREFIX_DIR/evtest/
+
+    if [ -f "$APP_DIR/build.sh" ]; then
+        cd "$APP_DIR"
+        ./build.sh --clean
+    fi
+
+    if [ -f "$PACK_DIR/build.sh" ]; then
+        cd "$PACK_DIR"
+        ./build.sh --clean
+    fi
 }
 
 function __main__
 {
     _sync_repo_sources_
 
-    # 编译工具链管理
-    if [ ! -d "$ROOT_DIR/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/" ];then
-        echo -e "$KYELLOW 编译工具链未解压,是否解压?$KRST"
-        _verify_allow_
-        cd $TOOLCHAIN_DIR
-        tar -xvf gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf.tar.xz
-    else
-        echo -e "$KBLUE Tool chain exist!$KRST"
+    if _need_toolchain_; then
+        # 编译工具链管理
+        if [ ! -d "$ROOT_DIR/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/" ];then
+            echo -e "$KYELLOW 编译工具链未解压,是否解压?$KRST"
+            _verify_allow_
+            cd $TOOLCHAIN_DIR
+            tar -xvf gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf.tar.xz
+        else
+            echo -e "$KBLUE Tool chain exist!$KRST"
+        fi
     fi
 
     _mk_app_
@@ -261,6 +346,7 @@ function __main__
 
     _mk_lirc_
     _mk_evtest_
+    _mk_pack_
 }
 
 #至少输入一个参数
@@ -270,7 +356,7 @@ if [ $# -lt 1 ]; then
         exit 1
 fi
 
-ARGS=`getopt --options h,p,c,m: --long help,pull,make:,name:,clean,push -n "${PROG}" -- "$@"`
+ARGS=`getopt --options h,p,c,m:in --long help,pull,make:,name:,clean,push,interactive,non-interactive -n "${PROG}" -- "$@"`
 if [ $? != 0 ]; then
     echo
     print_usage
@@ -324,6 +410,10 @@ do
                     MK_EVTEST=1
                     shift 2
                 ;;
+                pack)
+                    MK_PACK=1
+                    shift 2
+                ;;
             esac
         ;;
         --pull)
@@ -332,6 +422,10 @@ do
             ;;
         -p|--push)
             PUSH_BIN=1;
+            shift
+            ;;
+        -i|--interactive)
+            INTERACTIVE_CONFIG=1
             shift
             ;;
         -c|--clean)

@@ -57,6 +57,11 @@ function __mk_bin__
 
 function __push_bin__
 {
+    if [ ! -d /mnt/nastftp/ ]; then
+        echo "Push directory not found: /mnt/nastftp/"
+        exit 1
+    fi
+
     cp $PREFIX/drivers/*   /mnt/nastftp/
     cp $PREFIX/THub1/tuapp /mnt/nastftp/
 }
@@ -78,6 +83,23 @@ function __mk_lib__
         make
         make install
     fi
+}
+
+function __clean__
+{
+    _check_list_
+
+    if [ -d "$DIFFERENT_DIR/drivers/RF433" ]; then
+        cd "$DIFFERENT_DIR/drivers/RF433"
+        make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=$KERNEL_DIR clean >/dev/null 2>&1 || true
+    fi
+
+    if [ -d "$BUILD_DIR" ]; then
+        cd "$BUILD_DIR"
+        make clean >/dev/null 2>&1 || true
+    fi
+
+    rm -rf "$PREFIX"
 }
 
 function __main__
@@ -135,6 +157,10 @@ do
         -p|--push)
             PUSH_BIN=1
             shift
+            ;;
+        -c|--clean)
+            __clean__
+            exit
             ;;
         --)
             case "$2" in
