@@ -167,6 +167,25 @@ function _mk_kernel_
     fi
 }
 
+function _rootfs_toolchain_path_()
+{
+    local tc_path="$TOOLCHAIN_DIR/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf"
+    [ -d "$tc_path" ] || { echo -e "$KRED 工具链目录不存在: $tc_path $KRST"; exit 1; }
+    echo "$(cd "$tc_path" && pwd)/"
+}
+
+function _fixup_rootfs_toolchain_()
+{
+    local cfg="$ROOTFS_DIR/.config"
+    local tc_path
+    tc_path="$(_rootfs_toolchain_path_)"
+    [ -f "$cfg" ] || return 0
+    if grep -q '^BR2_TOOLCHAIN_EXTERNAL_PATH=' "$cfg"; then
+        sed -i "s|^BR2_TOOLCHAIN_EXTERNAL_PATH=.*|BR2_TOOLCHAIN_EXTERNAL_PATH=\"${tc_path}\"|" "$cfg"
+        echo -e "$KBLUE rootfs: 工具链路径 -> ${tc_path}${KRST}"
+    fi
+}
+
 function _mk_rootfs_
 {
     if [ $MK_ROOTFS -ne 1 ]; then
@@ -180,7 +199,9 @@ function _mk_rootfs_
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     cd $ROOTFS_DIR
     make ARCH=arm licheepi_zero_turboyan_defconfig
+    _fixup_rootfs_toolchain_
     _run_config_command_ make menuconfig
+    _fixup_rootfs_toolchain_
     _run_config_command_ make savedefconfig
     _run_config_command_ make busybox-menuconfig
     _run_config_command_ make busybox-update-config
